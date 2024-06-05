@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdventureNow</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <h1>AdventureNow</h1>
+        <select id="citySelector" onchange="loadCityActivities()">
+            <option value="oslo">Oslo</option>
+            <option value="ålesund">Ålesund</option>
+            <option value="stavanger">stavanger</option>
+            <!-- Add more cities as needed -->
+        </select>
+    </header>
+    <div class="container">
+        <div class="randomizer">
+            <h2>Find Your Next Activity</h2>
+            <label for="timeSlider">Time (minutes):</label>
+            <input type="range" id="timeSlider" min="5" max="120" value="30" oninput="updateTimeValue()">
+            <span id="timeValue">30</span> minutes
+
+            <br><br>
+
+            <label for="intensitySlider">Intensity:</label>
+            <input type="range" id="intensitySlider" min="1" max="10" value="5" oninput="updateIntensityValue()">
+            <span id="intensityValue">5</span>
+
+            <br><br>
+
+            <button id="randomizeButton" onclick="randomizeActivity()">Randomize Activity</button>
+
+            <h3>Suggested Activity:</h3>
+            <p id="activity"></p>
+        </div>
+
+        <div class="add-activity">
+            <h2>Add New Activity</h2>
+            <form id="addActivityForm">
+                <label for="activityName">Activity Name:</label>
+                <input type="text" id="activityName" required>
+                <label for="activityTime">Time (minutes):</label>
+                <input type="number" id="activityTime" min="5" max="240" required>
+                <label for="activityIntensity">Intensity:</label>
+                <input type="number" id="activityIntensity" min="1" max="10" required>
+                <button type="submit">Add Activity</button>
+            </form>
+        </div>
+
+        <div class="remove-activity">
+            <h2>Remove Activity</h2>
+            <form id="removeActivityForm">
+                <label for="activityToRemove">Activity Name:</label>
+                <input type="text" id="activityToRemove" oninput="suggestActivities()" required>
+                <ul id="suggestions" class="suggestions-list"></ul>
+                <button type="submit">Remove Activity</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function updateTimeValue() {
+            document.getElementById('timeValue').innerText = document.getElementById('timeSlider').value;
+        }
+
+        function updateIntensityValue() {
+            document.getElementById('intensityValue').innerText = document.getElementById('intensitySlider').value;
+        }
+
+        async function randomizeActivity() {
+            const button = document.getElementById('randomizeButton');
+            button.classList.add('animate');
+
+            const time = document.getElementById('timeSlider').value;
+            const intensity = document.getElementById('intensitySlider').value;
+            const city = document.getElementById('citySelector').value;
+
+            const response = await fetch('/randomize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ time, intensity, city })
+            });
+
+            const data = await response.json();
+            document.getElementById('activity').innerText = data.activity;
+
+            setTimeout(() => {
+                button.classList.remove('animate');
+            }, 1000); // animation duration
+        }
+
+        document.getElementById('addActivityForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const activityName = document.getElementById('activityName').value;
+            const activityTime = document.getElementById('activityTime').value;
+            const activityIntensity = document.getElementById('activityIntensity').value;
+            const city = document.getElementById('citySelector').value;
+
+            const response = await fetch('/add_activity', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ activity: activityName, time: activityTime, intensity: activityIntensity, city })
+            });
+
+            const data = await response.json();
+            alert(data.message);
+        });
+
+        document.getElementById('removeActivityForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const activityToRemove = document.getElementById('activityToRemove').value;
+            const city = document.getElementById('citySelector').value;
+
+            const response = await fetch('/remove_activity', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ activity: activityToRemove, city })
+            });
+
+            const data = await response.json();
+            alert(data.message);
+        });
+
+        async function suggestActivities() {
+            const query = document.getElementById('activityToRemove').value;
+            const city = document.getElementById('citySelector').value;
+            if (query.length < 3) {
+                document.getElementById('suggestions').innerHTML = '';
+                return;
+            }
+
+            const response = await fetch(`/suggest_activities?query=${query}&city=${city}`);
+            const activities = await response.json();
+            const suggestionsList = document.getElementById('suggestions');
+            suggestionsList.innerHTML = '';
+
+            activities.forEach(activity => {
+                const li = document.createElement('li');
+                li.textContent = activity;
+                li.addEventListener('click', () => {
+                    document.getElementById('activityToRemove').value = activity;
+                    suggestionsList.innerHTML = '';
+                });
+                suggestionsList.appendChild(li);
+            });
+        }
+
+        async function loadCityActivities() {
+            const city = document.getElementById('citySelector').value;
+            const response = await fetch(`/load_city_activities?city=${city}`);
+            const data = await response.json();
+            // Handle the response data if needed
+        }
+
+        // Load activities for the default selected city on page load
+        window.onload = loadCityActivities;
+    </script>
+</body>
+</html>
