@@ -4,6 +4,7 @@ import os
 
 app = Flask(__name__)
 
+
 # Directory where activity CSV files are stored
 activity_dir = 'activities'
 
