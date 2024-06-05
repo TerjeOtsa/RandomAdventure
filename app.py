@@ -85,7 +85,6 @@ def load_city_activities():
     activities_df = load_activities(city)
     return jsonify(activities_df.to_dict(orient='records'))
 
-if __name__ == '__main__':
-    if not os.path.exists(activity_dir):
-        os.makedirs(activity_dir)
-    app.run(debug=True)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
